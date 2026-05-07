@@ -1,5 +1,5 @@
 """
-JARVIS Mail Access — READ-ONLY access to Apple Mail.
+PLUTO Mail Access — READ-ONLY access to Apple Mail.
 
 Any accounts synced to Mail.app (Gmail, iCloud, Exchange, etc.)
 are automatically available. No OAuth needed.
@@ -12,7 +12,7 @@ import asyncio
 import logging
 from datetime import datetime
 
-log = logging.getLogger("jarvis.mail")
+log = logging.getLogger("pluto.mail")
 
 _mail_launched = False
 

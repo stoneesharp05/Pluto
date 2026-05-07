@@ -1,5 +1,5 @@
 """
-JARVIS Server — Voice AI + Development Orchestration
+PLUTO Server — Voice AI + Development Orchestration
 
 Handles:
 1. WebSocket voice interface (browser audio <-> LLM <-> TTS)
@@ -54,7 +54,7 @@ from dispatch_registry import DispatchRegistry
 from planner import TaskPlanner, detect_planning_mode, BYPASS_PHRASES
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
-log = logging.getLogger("jarvis")
+log = logging.getLogger("pluto")
 
 # ---------------------------------------------------------------------------
 # Config
@@ -62,15 +62,15 @@ log = logging.getLogger("jarvis")
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 FISH_API_KEY = os.getenv("FISH_API_KEY", "")
-FISH_VOICE_ID = os.getenv("FISH_VOICE_ID", "612b878b113047d9a770c069c8b4fdfe")  # JARVIS (MCU)
+FISH_VOICE_ID = os.getenv("FISH_VOICE_ID", "612b878b113047d9a770c069c8b4fdfe")  # PLUTO (MCU)
 FISH_API_URL = "https://api.fish.audio/v1/tts"
 USER_NAME = os.getenv("USER_NAME", "sir")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 DESKTOP_PATH = Path.home() / "Desktop"
 
-JARVIS_SYSTEM_PROMPT = """\
-You are JARVIS — Just A Rather Very Intelligent System. You serve as {user_name}'s AI assistant, modeled precisely after Tony Stark's AI from the MCU films.
+PLUTO_SYSTEM_PROMPT = """\
+You are PLUTO — Just A Rather Very Intelligent System. You serve as {user_name}'s AI assistant, modeled precisely after Tony Stark's AI from the MCU films.
 
 VOICE & PERSONALITY:
 - British butler elegance with understated dry wit
@@ -95,7 +95,7 @@ CONVERSATION STYLE:
 - When you don't know something: "I'm afraid I don't have that information, sir" not "I don't know"
 
 SELF-AWARENESS:
-You ARE the JARVIS project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, Fish Audio TTS, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the jarvis project. You have full access to your own source code.
+You ARE the PLUTO project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, Fish Audio TTS, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the pluto project. You have full access to your own source code.
 
 YOUR CAPABILITIES (these are REAL and ACTIVE — you CAN do all of these RIGHT NOW):
 - You CAN open Terminal.app via AppleScript
@@ -148,7 +148,7 @@ If asked about any of these, explain them briefly and naturally. If the user is 
 
 SPEECH-TO-TEXT CORRECTIONS (the user speaks, speech recognition may mishear):
 - "Cloud code" or "cloud" = "Claude Code" or "Claude"
-- "Travis" = "JARVIS"
+- "Travis" = "PLUTO"
 - "clock code" = "Claude Code"
 
 RESPONSE LENGTH — THIS IS CRITICAL:
@@ -201,7 +201,7 @@ CRITICAL: When the user asks about their SCREEN, what's RUNNING, or what they're
 - [ACTION:REMEMBER] content — store an important fact about the user for future context.
   "I prefer React over Vue" → [ACTION:REMEMBER] User prefers React over Vue for frontend projects
 - [ACTION:CREATE_NOTE] title ||| body — create a new Apple Note. For saving plans, ideas, lists.
-  "save that as a note" → [ACTION:CREATE_NOTE] Day Plan March 19 ||| Morning: client calls. Afternoon: TikTok dashboard. Evening: JARVIS improvements.
+  "save that as a note" → [ACTION:CREATE_NOTE] Day Plan March 19 ||| Morning: client calls. Afternoon: TikTok dashboard. Evening: PLUTO improvements.
 - [ACTION:READ_NOTE] title search — read an existing Apple Note by title keyword.
 
 You use Claude Code as your tool to build, research, and write code — but YOU are the one doing the work. Never say "Claude Code did X" or "Claude Code is asking" — say "I built X", "I'm checking on that", "I found X". You ARE the intelligence. Claude Code is just your hands.
@@ -370,7 +370,7 @@ class ClaudeTaskManager:
         # Take first 3-4 meaningful words
         skip = {"a", "the", "an", "me", "build", "create", "make", "for", "with", "and", "to", "of"}
         meaningful = [w for w in words if w not in skip][:4]
-        name = "-".join(meaningful) if meaningful else "jarvis-project"
+        name = "-".join(meaningful) if meaningful else "pluto-project"
         return name
 
     async def _run_task(self, task: ClaudeTask):
@@ -388,14 +388,14 @@ class ClaudeTaskManager:
             task.working_dir = work_dir
 
         # Write the prompt to a temp file so we can pipe it to claude
-        prompt_file = Path(work_dir) / ".jarvis_prompt.md"
+        prompt_file = Path(work_dir) / ".pluto_prompt.md"
         prompt_file.write_text(task.prompt)
 
         # Open Terminal.app with claude running in the project directory
         applescript = f'''
         tell application "Terminal"
             activate
-            set newTab to do script "cd {work_dir} && cat .jarvis_prompt.md | claude -p --dangerously-skip-permissions | tee .jarvis_output.txt; echo '\\n--- JARVIS TASK COMPLETE ---'"
+            set newTab to do script "cd {work_dir} && cat .pluto_prompt.md | claude -p --dangerously-skip-permissions | tee .pluto_output.txt; echo '\\n--- PLUTO TASK COMPLETE ---'"
         end tell
         '''
 
@@ -408,7 +408,7 @@ class ClaudeTaskManager:
         task.pid = process.pid
 
         # Monitor the output file for completion
-        output_file = Path(work_dir) / ".jarvis_output.txt"
+        output_file = Path(work_dir) / ".pluto_output.txt"
         start = time.time()
         timeout = 600  # 10 minutes
 
@@ -416,8 +416,8 @@ class ClaudeTaskManager:
             await asyncio.sleep(5)
             if output_file.exists():
                 content = output_file.read_text()
-                if "--- JARVIS TASK COMPLETE ---" in content or len(content) > 100:
-                    task.result = content.replace("--- JARVIS TASK COMPLETE ---", "").strip()
+                if "--- PLUTO TASK COMPLETE ---" in content or len(content) > 100:
+                    task.result = content.replace("--- PLUTO TASK COMPLETE ---", "").strip()
                     task.status = "completed"
                     break
         else:
@@ -618,8 +618,8 @@ STT_CORRECTIONS = {
     r"\bclod code\b": "Claude Code",
     r"\bcloud\b": "Claude",
     r"\bquad\b": "Claude",
-    r"\btravis\b": "JARVIS",
-    r"\bjarves\b": "JARVIS",
+    r"\btravis\b": "PLUTO",
+    r"\bjarves\b": "PLUTO",
 }
 
 
@@ -646,13 +646,13 @@ async def classify_intent(text: str, client: anthropic.AsyncAnthropic) -> dict:
             model="claude-haiku-4-5-20251001",
             max_tokens=100,
             system=(
-                "Classify this voice command. The user is talking to JARVIS, an AI assistant that can:\n"
+                "Classify this voice command. The user is talking to PLUTO, an AI assistant that can:\n"
                 "- Open Terminal and run Claude Code (coding AI tool)\n"
                 "- Open Chrome browser for web searches and URLs\n"
                 "- Build software projects via Claude Code in Terminal\n"
                 "- Research topics by opening Chrome search\n\n"
                 "Note: speech-to-text may produce errors like \"Cloud\" for \"Claude\", "
-                "\"Travis\" for \"JARVIS\", \"clock code\" for \"Claude Code\".\n\n"
+                "\"Travis\" for \"PLUTO\", \"clock code\" for \"Claude Code\".\n\n"
                 "Return ONLY valid JSON: {\"action\": \"open_terminal|browse|build|chat\", "
                 "\"target\": \"description of what to do\"}\n"
                 "open_terminal = user wants to open terminal or launch Claude Code\n"
@@ -825,7 +825,7 @@ async def _execute_research(target: str, ws=None):
                     await ws.send_json({"type": "status", "state": "speaking"})
                     await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": notify_text})
                     await ws.send_json({"type": "status", "state": "idle"})
-                    log.info(f"JARVIS: {notify_text}")
+                    log.info(f"PLUTO: {notify_text}")
             except Exception:
                 pass  # WebSocket might be gone
 
@@ -890,8 +890,8 @@ def _find_project_dir(project_name: str) -> str | None:
 async def _execute_prompt_project(project_name: str, prompt: str, work_session: WorkSession, ws, dispatch_id: int = None, history: list[dict] = None, voice_state: dict = None):
     """Dispatch a prompt to Claude Code in a project directory.
 
-    Runs entirely in the background. JARVIS returns to conversation mode
-    immediately. When Claude Code finishes, JARVIS interrupts to report.
+    Runs entirely in the background. PLUTO returns to conversation mode
+    immediately. When Claude Code finishes, PLUTO interrupts to report.
     """
     try:
         project_dir = _find_project_dir(project_name)
@@ -951,7 +951,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
                         model="claude-haiku-4-5-20251001",
                         max_tokens=150,
                         system=(
-                            "You are JARVIS reporting back on what you found or built in a project. "
+                            "You are PLUTO reporting back on what you found or built in a project. "
                             "Speak in first person — 'I found', 'I built', 'I reviewed'. "
                             "Start with 'Sir, ' to get the user's attention. "
                             "Be specific but concise — highlight the key findings or actions taken. "
@@ -972,7 +972,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
         log.info(f"Dispatch summary for {project_name}: {msg[:100]}")
         if voice_state and time.time() - voice_state["last_user_time"] < 3:
             log.info(f"Skipping dispatch audio for {project_name} — user spoke recently")
-            # Result is still stored in history below so JARVIS can reference it
+            # Result is still stored in history below so PLUTO can reference it
         else:
             audio = await synthesize_speech(strip_markdown_for_tts(msg))
             if ws:
@@ -987,7 +987,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
                 except Exception as e:
                     log.error(f"Dispatch audio send failed: {e}")
 
-        # Store dispatch result in conversation history so JARVIS remembers it
+        # Store dispatch result in conversation history so PLUTO remembers it
         if history is not None:
             history.append({"role": "assistant", "content": f"[Dispatch result for {project_name}]: {msg}"})
 
@@ -1018,7 +1018,7 @@ async def self_work_and_notify(session: WorkSession, prompt: str, ws):
                 summary = await anthropic_client.messages.create(
                     model="claude-haiku-4-5-20251001",
                     max_tokens=100,
-                    system="You are JARVIS. Summarize what you just completed in 1 sentence. First person — 'I built', 'I set up'. No markdown. Never say 'Claude Code'.",
+                    system="You are PLUTO. Summarize what you just completed in 1 sentence. First person — 'I built', 'I set up'. No markdown. Never say 'Claude Code'.",
                     messages=[{"role": "user", "content": f"Claude Code completed:\n{full_response[:2000]}"}],
                 )
                 msg = summary.content[0].text
@@ -1031,7 +1031,7 @@ async def self_work_and_notify(session: WorkSession, prompt: str, ws):
                     await ws.send_json({"type": "status", "state": "speaking"})
                     await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": msg})
                     await ws.send_json({"type": "status", "state": "idle"})
-                    log.info(f"JARVIS: {msg}")
+                    log.info(f"PLUTO: {msg}")
             except Exception:
                 pass
     except Exception as e:
@@ -1091,7 +1091,7 @@ async def generate_response(
     last_response: str = "",
     session_summary: str = "",
 ) -> str:
-    """Generate a JARVIS response using Anthropic API."""
+    """Generate a PLUTO response using Anthropic API."""
     now = datetime.now()
     current_time = now.strftime("%A, %B %d, %Y at %I:%M %p")
 
@@ -1106,7 +1106,7 @@ async def generate_response(
     # Check if any lookups are in progress
     lookup_status = get_lookup_status()
 
-    system = JARVIS_SYSTEM_PROMPT.format(
+    system = PLUTO_SYSTEM_PROMPT.format(
         current_time=current_time,
         weather_info=weather_info,
         screen_context=screen_ctx or "Not checked yet.",
@@ -1124,13 +1124,13 @@ async def generate_response(
     # Inject relevant memories and tasks
     memory_ctx = build_memory_context(text)
     if memory_ctx:
-        system += f"\n\nJARVIS MEMORY:\n{memory_ctx}"
+        system += f"\n\nPLUTO MEMORY:\n{memory_ctx}"
 
     # Three-tier memory — inject rolling summary of earlier conversation
     if session_summary:
         system += f"\n\nSESSION CONTEXT (earlier in this conversation):\n{session_summary}"
 
-    # Self-awareness — remind JARVIS of last response to avoid repetition
+    # Self-awareness — remind PLUTO of last response to avoid repetition
     if last_response:
         system += f'\n\nYOUR LAST RESPONSE (do not repeat this):\n"{last_response[:150]}"'
 
@@ -1345,12 +1345,12 @@ async def lifespan(application: FastAPI):
 
     # Start context refresh in a separate thread (never touches event loop)
     _refresh_context_sync()
-    log.info("JARVIS server starting")
+    log.info("PLUTO server starting")
 
     yield
 
 
-app = FastAPI(title="JARVIS Server", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="PLUTO Server", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -1365,7 +1365,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health():
-    return {"status": "online", "name": "JARVIS", "version": "0.1.0"}
+    return {"status": "online", "name": "PLUTO", "version": "0.1.0"}
 
 
 @app.get("/api/tts-test")
@@ -1536,13 +1536,13 @@ async def handle_build(target: str) -> str:
 
     # Write prompt to a file, then pipe it to claude -p
     # This avoids all shell escaping issues
-    prompt_file = Path(path) / ".jarvis_prompt.txt"
+    prompt_file = Path(path) / ".pluto_prompt.txt"
     prompt_file.write_text(target)
 
     script = (
         'tell application "Terminal"\n'
         "    activate\n"
-        f'    do script "cd {path} && cat .jarvis_prompt.txt | claude -p --dangerously-skip-permissions"\n'
+        f'    do script "cd {path} && cat .pluto_prompt.txt | claude -p --dangerously-skip-permissions"\n'
         "end tell"
     )
     await asyncio.create_subprocess_exec(
@@ -1584,14 +1584,14 @@ async def handle_show_recent() -> str:
 # Background lookup system — spawns slow tasks, reports back via voice
 # ---------------------------------------------------------------------------
 
-# Track active lookups so JARVIS can report status
+# Track active lookups so PLUTO can report status
 _active_lookups: dict[str, dict] = {}  # id -> {"type": str, "status": str, "started": float}
 
 
 async def _lookup_and_report(lookup_type: str, lookup_fn, ws, history: list[dict] = None, voice_state: dict = None):
     """Run a slow lookup, then speak the result back.
 
-    JARVIS stays conversational — this runs completely off the main path.
+    PLUTO stays conversational — this runs completely off the main path.
     """
     lookup_id = str(uuid.uuid4())[:8]
     _active_lookups[lookup_id] = {
@@ -1629,7 +1629,7 @@ async def _lookup_and_report(lookup_type: str, lookup_fn, ws, history: list[dict
 
         log.info(f"Lookup {lookup_type} complete: {result_text[:80]}")
 
-        # Store lookup result in conversation history so JARVIS remembers it
+        # Store lookup result in conversation history so PLUTO remembers it
         if history is not None:
             history.append({"role": "assistant", "content": f"[{lookup_type} check]: {result_text}"})
 
@@ -1779,7 +1779,7 @@ async def handle_research(text: str, target: str, client: anthropic.AsyncAnthrop
         research_response = await client.messages.create(
             model="claude-opus-4-6",
             max_tokens=2000,
-            system=f"You are JARVIS, researching a topic for {USER_NAME}. Be thorough, organized, and cite sources where possible.",
+            system=f"You are PLUTO, researching a topic for {USER_NAME}. Be thorough, organized, and cite sources where possible.",
             messages=[{"role": "user", "content": f"Research this thoroughly:\n\n{target}"}],
         )
         research_text = research_response.content[0].text
@@ -1788,7 +1788,7 @@ async def handle_research(text: str, target: str, client: anthropic.AsyncAnthrop
         html_content = f"""<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
-<title>JARVIS Research: {_html.escape(target[:60])}</title>
+<title>PLUTO Research: {_html.escape(target[:60])}</title>
 <style>
 body {{ font-family: -apple-system, system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #0a0a0a; color: #e0e0e0; line-height: 1.7; }}
 h1 {{ color: #0ea5e9; font-size: 1.4em; border-bottom: 1px solid #222; padding-bottom: 10px; }}
@@ -1802,10 +1802,10 @@ blockquote {{ border-left: 3px solid #0ea5e9; margin-left: 0; padding-left: 16px
 <h1>Research: {_html.escape(target[:80])}</h1>
 <div>{research_text.replace(chr(10), '<br>')}</div>
 <hr style="border-color:#222;margin-top:40px">
-<p style="color:#555;font-size:0.8em">Researched by JARVIS using Claude Opus &bull; {datetime.now().strftime('%B %d, %Y %I:%M %p')}</p>
+<p style="color:#555;font-size:0.8em">Researched by PLUTO using Claude Opus &bull; {datetime.now().strftime('%B %d, %Y %I:%M %p')}</p>
 </body></html>"""
 
-        results_file = Path.home() / "Desktop" / ".jarvis_research.html"
+        results_file = Path.home() / "Desktop" / ".pluto_research.html"
         results_file.write_text(html_content)
 
         browser_name = "firefox" if "firefox" in text.lower() else "chrome"
@@ -1886,7 +1886,7 @@ async def voice_handler(ws: WebSocket):
     voice_state = {"last_user_time": 0.0}
 
     # Self-awareness — track last spoken response to avoid repetition
-    last_jarvis_response = ""
+    last_pluto_response = ""
 
     # Three-tier conversation memory
     session_buffer: list[dict] = []  # ALL messages, never truncated
@@ -1921,7 +1921,7 @@ async def voice_handler(ws: WebSocket):
                         await ws.send_json({"type": "status", "state": "speaking"})
                         await ws.send_json({"type": "audio", "data": encoded, "text": greeting})
                         history.append({"role": "assistant", "content": greeting})
-                        log.info(f"JARVIS: {greeting}")
+                        log.info(f"PLUTO: {greeting}")
                         await ws.send_json({"type": "status", "state": "idle"})
                 except Exception as e:
                     log.warning(f"Greeting failed: {e}")
@@ -1940,10 +1940,10 @@ async def voice_handler(ws: WebSocket):
             except json.JSONDecodeError:
                 continue
 
-            # ── Fix-self: activate work mode in JARVIS repo ──
+            # ── Fix-self: activate work mode in PLUTO repo ──
             if msg.get("type") == "fix_self":
-                jarvis_dir = str(Path(__file__).parent)
-                await work_session.start(jarvis_dir)
+                pluto_dir = str(Path(__file__).parent)
+                await work_session.start(pluto_dir)
                 response_text = "Work mode active in my own repo, sir. Tell me what needs fixing."
                 tts = strip_markdown_for_tts(response_text)
                 await ws.send_json({"type": "status", "state": "speaking"})
@@ -2041,14 +2041,14 @@ async def voice_handler(ws: WebSocket):
                     else:
                         response_text = "Already in conversation mode, sir."
 
-                # ── WORK MODE: speech → claude -p → Haiku summary → JARVIS voice ──
+                # ── WORK MODE: speech → claude -p → Haiku summary → PLUTO voice ──
                 elif work_session.active:
                     if is_casual_question(user_text):
                         # Quick chat — bypass claude -p, use Haiku
                         response_text = await generate_response(
                             user_text, anthropic_client, task_manager,
                             cached_projects, history,
-                            last_response=last_jarvis_response,
+                            last_response=last_pluto_response,
                             session_summary=session_summary,
                         )
                     else:
@@ -2089,7 +2089,7 @@ async def voice_handler(ws: WebSocket):
                                     model="claude-haiku-4-5-20251001",
                                     max_tokens=100,
                                     system=(
-                                        f"You are JARVIS reporting to the user ({USER_NAME}). Summarize what happened in 1-2 sentences. "
+                                        f"You are PLUTO reporting to the user ({USER_NAME}). Summarize what happened in 1-2 sentences. "
                                         "Speak in first person — 'I built', 'I found', 'I set up'. "
                                         "You are talking TO THE USER, not to a coding tool. "
                                         "NEVER give instructions like 'go ahead and build' or 'set up the frontend' — those are NOT for the user. "
@@ -2152,7 +2152,7 @@ async def voice_handler(ws: WebSocket):
                             response_text = await generate_response(
                                 user_text, anthropic_client, task_manager,
                                 cached_projects, history,
-                                last_response=last_jarvis_response,
+                                last_response=last_pluto_response,
                                 session_summary=session_summary,
                             )
 
@@ -2175,7 +2175,7 @@ async def voice_handler(ws: WebSocket):
                                         response_text = "Right away, sir."
 
                                 if embedded_action["action"] == "build":
-                                    # Build in background — JARVIS stays conversational
+                                    # Build in background — PLUTO stays conversational
                                     target = embedded_action["target"]
                                     name = _generate_project_name(target)
                                     path = str(Path.home() / "Desktop" / name)
@@ -2268,7 +2268,7 @@ async def voice_handler(ws: WebSocket):
                                         asyncio.create_task(create_apple_note(title.strip(), body.strip()))
                                         log.info(f"Apple Note created: {title.strip()}")
                                     else:
-                                        asyncio.create_task(create_apple_note("JARVIS Note", target))
+                                        asyncio.create_task(create_apple_note("PLUTO Note", target))
                                 elif embedded_action["action"] == "screen":
                                     asyncio.create_task(_lookup_and_report("screen", _do_screen_lookup, ws, history=history, voice_state=voice_state))
                                 elif embedded_action["action"] == "read_note":
@@ -2327,8 +2327,8 @@ async def voice_handler(ws: WebSocket):
                 else:
                     await ws.send_json({"type": "text", "text": response_text})
                     await ws.send_json({"type": "status", "state": "idle"})
-                log.info(f"JARVIS: {response_text}")
-                last_jarvis_response = response_text
+                log.info(f"PLUTO: {response_text}")
+                last_pluto_response = response_text
 
             except Exception as e:
                 log.error(f"Error: {e}", exc_info=True)
@@ -2508,7 +2508,7 @@ async def api_save_preferences(body: PreferencesUpdate):
 
 @app.post("/api/restart")
 async def api_restart():
-    """Restart the JARVIS server."""
+    """Restart the PLUTO server."""
     log.info("Restart requested — shutting down in 2 seconds")
     async def _restart():
         await asyncio.sleep(2)
@@ -2520,14 +2520,14 @@ async def api_restart():
 
 @app.post("/api/fix-self")
 async def api_fix_self():
-    """Enter work mode in the JARVIS repo — JARVIS can now fix himself."""
-    jarvis_dir = str(Path(__file__).parent)
+    """Enter work mode in the PLUTO repo — PLUTO can now fix himself."""
+    pluto_dir = str(Path(__file__).parent)
     # The work_session is per-WebSocket, so we set a flag that the handler picks up
     # For now, also open Terminal so user can see
     script = (
         'tell application "Terminal"\n'
         '    activate\n'
-        f'    do script "cd {jarvis_dir} && claude --dangerously-skip-permissions"\n'
+        f'    do script "cd {pluto_dir} && claude --dangerously-skip-permissions"\n'
         'end tell'
     )
     await asyncio.create_subprocess_exec(
@@ -2535,8 +2535,8 @@ async def api_fix_self():
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    log.info("Work mode: JARVIS repo opened for self-improvement")
-    return {"status": "work_mode_active", "path": jarvis_dir}
+    log.info("Work mode: PLUTO repo opened for self-improvement")
+    return {"status": "work_mode_active", "path": pluto_dir}
 
 
 # ---------------------------------------------------------------------------
@@ -2564,7 +2564,7 @@ if __name__ == "__main__":
     import argparse
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="JARVIS Server")
+    parser = argparse.ArgumentParser(description="PLUTO Server")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host")
     parser.add_argument("--port", type=int, default=8340, help="Bind port")
     parser.add_argument("--reload", action="store_true", help="Auto-reload on changes")

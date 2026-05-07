@@ -1,5 +1,5 @@
 """
-JARVIS Task Planner — Conversational planning before spawning Claude Code.
+PLUTO Task Planner — Conversational planning before spawning Claude Code.
 
 Handles:
 1. Planning mode detection (distinguish "build me X" from "what time is it")
@@ -19,7 +19,7 @@ import anthropic
 
 from templates import TEMPLATES, get_template
 
-log = logging.getLogger("jarvis.planner")
+log = logging.getLogger("pluto.planner")
 
 DESKTOP_PATH = Path.home() / "Desktop"
 
